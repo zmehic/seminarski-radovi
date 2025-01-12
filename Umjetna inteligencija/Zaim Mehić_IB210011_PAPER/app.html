@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Dynamic Form - Prediction App</title>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: #f9f9f9;
+              color: #333;
+          }
+
+          .container {
+              width: 95%;
+              margin: 20px auto;
+              text-align: center;
+          }
+
+          h1 {
+              margin-bottom: 20px;
+              color: #555;
+          }
+
+          .row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 20px;
+              flex-wrap: wrap;
+          }
+
+          .column {
+              flex: 1;
+              padding: 10px;
+              border: 1px solid #ddd;
+              background-color: #fff;
+              border-radius: 5px;
+              margin: 0 5px;
+              min-width: 200px; /* Ensure columns stack on small screens */
+              max-width: 250px;
+          }
+
+          .column h3 {
+              margin-bottom: 10px;
+              font-size: 16px;
+              color: #555;
+          }
+
+          .field-group {
+              margin-bottom: 15px;
+              text-align: left;
+          }
+
+          .field-group label {
+              display: block;
+              font-size: 14px;
+              margin-bottom: 5px;
+              color: #333;
+          }
+          .hiddendiv{
+            display: none;
+          }
+          .field-group input, .field-group select {
+              display: block;
+              width: 100%;
+              padding: 8px;
+              font-size: 14px;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+              box-sizing: border-box; /* Ensures padding is included in the width */
+          }
+
+          .field-group input[type="number"] {
+              -moz-appearance: textfield; /* Remove spinner in Firefox */
+          }
+
+          .predict-btn {
+              padding: 10px 20px;
+              font-size: 16px;
+              color: #fff;
+              background-color: #007BFF;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+              margin-top: 20px;
+          }
+
+          .predict-btn:hover {
+              background-color: #0056b3;
+          }
+
+          .actual-btn {
+              padding: 10px 20px;
+              font-size: 16px;
+              color: #fff;
+              background-color: #007BFF;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+              margin-top: 20px;
+          }
+
+
+          .actual-btn:hover {
+              background-color: #0056b3;
+          }
+
+          .output {
+              margin-top: 20px;
+              font-size: 18px;
+              color: #333;
+          }
+
+          /* Responsive design for smaller screens */
+          @media (max-width: 768px) {
+              .row {
+                  flex-direction: column;
+                  align-items: center;
+              }
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <h1>Paper - Weekly Prediction</h1>
+          <div id="form-container" class="row"></div>
+          <button id="predict_btn" class="predict-btn" onclick="sendPrediction()">Predict</button>
+          <div class="output" id="output"></div>
+          <button id="actual-btn" class="actual-btn" onclick="sendRealData()">Save Actual Data and Retrain</button>
+      </div>
+
+      <script>
+          const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+          const seasons = ["Winter", "Spring", "Summer", "Autumn"];
+          const holidays = ["No", "Yes"];
+          const covidOptions = ["No", "Yes"];
+
+          // Function to generate the form dynamically
+          function generateForm() {
+              let formHTML = '';
+              document.getElementById("actual-btn").classList.add("hiddendiv");
+              daysOfWeek.forEach((day, index) => {
+                  let dayIndex = index + 1;
+                  let today = new Date();
+                  today.setDate(today.getDate() + index); // Increment date for each day
+
+                  const formattedDate = today.toISOString().split('T')[0];
+                  
+                  formHTML += `
+                  <div class="column" id="day-${dayIndex}">
+                      <h3>Day ${dayIndex}</h3>
+
+                      <div class="field-group">
+                          <label for="date-${dayIndex}">Date</label>
+                          <input type="date" id="date-${dayIndex}" value="${formattedDate}" disabled class="field" required>
+                      </div>
+                      <div id="missing-input-${dayIndex}">
+                        <div class="field-group">
+                            <label for="covid-${dayIndex}">Covid</label>
+                            <select id="covid-${dayIndex}" class="field" required>
+                                <option value="">Select</option>
+                                <option value="0">${covidOptions[0]}</option>
+                                <option value="1">${covidOptions[1]}</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label for="tmin-${dayIndex}">Minimum Temperature</label>
+                            <input type="number" class="field" id="tmin-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="tmax-${dayIndex}">Maximum Temperature</label>
+                            <input type="number" class="field" id="tmax-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="minwind-${dayIndex}">Minimum Wind Speed</label>
+                            <input type="number" class="field" id="minwind-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="maxwind-${dayIndex}">Maximum Wind Speed</label>
+                            <input type="number" class="field" id="maxwind-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="pres-${dayIndex}">Pressure</label>
+                            <input type="number" class="field" id="pres-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="winddir-${dayIndex}">Wind Direction</label>
+                            <input type="number" class="field" id="winddir-${dayIndex}" required>
+                        </div>
+                        <div class="field-group">
+                            <label for="season-${dayIndex}">Season</label>
+                            <select id="season-${dayIndex}" class="field" required>
+                                <option value="">Select</option>
+                                ${seasons.map((season, i) => `<option value="${i + 1}">${season}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label for="weekday-${dayIndex}">Day of the Week</label>
+                            <select id="weekday-${dayIndex}" class="field" required>
+                                <option value="">Select</option>
+                                ${daysOfWeek.map((day, i) => `<option value="${i + 1}">${day}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label for="holiday-${dayIndex}">Holiday</label>
+                            <select id="holiday-${dayIndex}" class="field" required>
+                                <option value="">Select</option>
+                                ${holidays.map((holiday, i) => `<option value="${i}">${holiday}</option>`).join('')}
+                            </select>
+                        </div>
+                      </div>
+                      <div class="field-group">
+                        <div>
+                          <strong>Prediction:</strong> 
+                          <span id="prediction-day-${dayIndex}">N/A</span>
+                        </div>
+                          <label for="actual-${dayIndex}">Actual:</label>
+                          <input type="number" id="actual-${dayIndex}" class="field" placeholder="Enter actual value" disabled=true>
+                      </div>
+                  </div>`;
+              });
+
+              document.getElementById('form-container').innerHTML = formHTML;
+
+              getInitialData();
+          }
+
+          function getInitialData(){
+            fetch("http://127.0.0.1:5000/check_missing_values", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+            }).then(response => response.json()).then(data => {
+                  console.log(data);  // Debugging step to check what data looks like
+                  if(data.missing_records && data.missing_records.length > 0){
+                      for (let i = 7; i > data.missing_records.length; i--) {
+                        document.getElementById(`day-${i}`).classList.add("hiddendiv");
+                        console.log("Ok");
+                      }
+
+                      data.missing_records.forEach((item,index) => {
+                        document.getElementById(`date-${index+1}`).value = data.missing_records[index].date;                        
+                        document.getElementById(`missing-input-${index+1}`).classList.add("hiddendiv");
+                        document.getElementById("actual-btn").classList.remove("hiddendiv");
+                        document.getElementById(`actual-${index+1}`).disabled=false;
+                        document.getElementById(`predict_btn`).disabled=true;
+                        document.getElementById(`predict_btn`).classList.add("hiddendiv");
+                        document.getElementById(`prediction-day-${index + 1}`).innerText = data.missing_records[index].pred.toFixed(0);
+                        console.log("Ok");
+                      });
+                  }else{
+                    for (let i = 0; i < 7; i++) {
+                        var newdate = new Date(data.last_date);
+                        newdate.setDate(newdate+1);
+                        document.getElementById(`date-${i+1}`).value = data.last_dates[i];
+                        console.log("Ok");
+                      }
+                      document.getElementById(`predict_btn`).disabled=false;
+                      document.getElementById(`predict_btn`).classList.remove("hiddendiv");
+                  }
+              })
+                .catch(error => {
+                    document.getElementById("output").innerText = `Error: ${error.message}`;
+                });
+          }
+          
+          function sendRealData(){
+            const days = [];
+
+            for (let i = 1; i <= 7; i++) {
+              const fields = document.querySelectorAll(`#day-${i} .field`);
+              const dayData = Array.from(fields).map(field => field.value);
+              const date = dayData[0];
+              const value = parseInt(dayData[11]); 
+              const day = {
+                  date: date,
+                  value: value,
+              };
+              let isNull = false;
+
+              // Loop through the properties of the day object
+              for (let key in day) {
+                if(key != 'date'){
+                  if (day[key] == null || day[key] === "" || isNaN(day[key])) {
+                      isNull = true;
+                      break; // Exit the loop as soon as an invalid value is found
+                  }
+                }
+              }
+
+              if (!isNull) {
+                  days.push(day); // Add to the days array only if all fields are valid
+              }
+            }
+
+            fetch("http://127.0.0.1:5000/real", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(days)
+            })
+                .then(response => response.json())
+                .then(data => {
+                  generateForm()
+                })
+                .catch(error => {
+                    document.getElementById("output").innerText = `Error: ${error.message}`;
+                });
+            
+          }
+          // Function to handle form submission (just for the structure, not functional here)
+          function sendPrediction() {
+            const days = [];
+
+            // Gather data for all 7 columns
+            for (let i = 1; i <= 7; i++) {
+              const fields = document.querySelectorAll(`#day-${i} .field`);
+              const dayData = Array.from(fields).map(field => field.value);
+              const date = dayData[0];
+              const covid = parseInt(dayData[1]);  // Covid (0 or 1)
+              const tmin = parseFloat(dayData[2]); // Minimum Temperature
+              const tmax = parseFloat(dayData[3]);
+              tsum = tmin+tmax;
+              const tavg = parseFloat(tsum/2);  // Maximum Temperature
+              const tdiff = parseFloat(tmax-tmin); // Temperature Difference
+              const minwind = parseFloat(dayData[4]); // Minimum Wind Speed
+              const maxwind = parseFloat(dayData[5]); // Maximum Wind Speed
+              wsum = minwind+maxwind;
+              const windavg = parseFloat(wsum/2); // Average Wind Speed
+              const winddiff = parseFloat(maxwind-minwind); // Wind Difference
+              const winddir = parseFloat(dayData[7])
+              const pres = parseFloat(dayData[6]); // Pressure
+              const season = parseInt(dayData[8]); // Season
+              const weekday = parseInt(dayData[9]); // Day of the Week
+              const holiday = parseInt(dayData[10]); // Holiday (0 or 1)
+
+              // Calculate sin and cos values for week, season, and wind direction
+              const sinweek = Math.sin((2 * Math.PI / 7) * (weekday - 1));  // Day of the week (1-7)
+              const cosweek = Math.cos((2 * Math.PI / 7) * (weekday - 1));
+
+              const sindir = Math.sin(parseFloat(dayData[6]));  // Wind Direction
+              const cosdir = Math.cos(parseFloat(dayData[6]));
+
+              const seasonsin = Math.sin((2 * Math.PI / 4) * (season - 1));  // Season (1-4)
+              const seasoncos = Math.cos((2 * Math.PI / 4) * (season - 1));
+              // Create the day object in the required format
+              const day = {
+                  date: date,
+                  covid: covid,
+                  tavg: tavg,
+                  tmin: tmin,
+                  tmax: tmax,
+                  tdiff: tdiff,
+                  minwind: minwind,
+                  maxwind: maxwind,
+                  windavg: windavg,
+                  winddiff: winddiff,
+                  pres: pres,
+                  sindir: sindir,
+                  cosdir: cosdir,
+                  seasonsin: seasonsin,
+                  seasoncos: seasoncos,
+                  sinweek: sinweek,
+                  cosweek: cosweek,
+                  holiday: holiday
+              };
+              let isNull = false;
+
+              // Loop through the properties of the day object
+              for (let key in day) {
+                if(key != 'date'){
+                  if (day[key] == null || day[key] === "" || isNaN(day[key])) {
+                      isNull = true;
+                      break; // Exit the loop as soon as an invalid value is found
+                  }
+                }
+              }
+
+              if (!isNull) {
+                  days.push(day); // Add to the days array only if all fields are valid
+              }
+            }
+
+            // Send data to the API
+            fetch("http://127.0.0.1:5000/predict", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(days)
+            })
+                .then(response => response.json())
+                .then(data => {
+                  data.predictions.forEach((prediction, index) => {
+                                pred = prediction.toFixed(0);
+                                document.getElementById(`prediction-day-${index + 1}`).innerText = prediction.toFixed(0);
+                                if (!isNaN(pred)) {
+                                    document.getElementById(`actual-${index + 1}`).disabled = false;
+                                } else {
+                                  document.getElementById(`actual-${index + 1}`).disabled = true;
+                                }
+                            });
+                            generateForm();
+
+                })
+                .catch(error => {
+                    document.getElementById("output").innerText = `Error: ${error.message}`;
+                });
+
+            }
+            window.onload = generateForm;
+      </script>
+  </body>
+</html>
